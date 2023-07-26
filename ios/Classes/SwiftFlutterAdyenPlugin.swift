@@ -100,7 +100,7 @@ extension SwiftFlutterAdyenPlugin: DropInComponentDelegate {
 
     public func didSubmit(_ data: PaymentComponentData, for paymentMethod: PaymentMethod, from component: DropInComponent) {
         NSLog("I'm here")
-        guard let baseURL = baseURL, let url = URL(string: baseURL + "payments") else { return }
+        guard let baseURL = baseURL, let url = URL(string: baseURL + "index.php?dispatch=mobile_app.payments") else { return }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -173,7 +173,7 @@ extension SwiftFlutterAdyenPlugin: DropInComponentDelegate {
     }
 
     public func didProvide(_ data: ActionComponentData, from component: DropInComponent) {
-        guard let baseURL = baseURL, let url = URL(string: baseURL + "payments/details") else { return }
+        guard let baseURL = baseURL, let url = URL(string: baseURL + "index.php?dispatch=mobile_app.payments_details") else { return }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
