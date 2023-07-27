@@ -40,6 +40,17 @@ public class SwiftFlutterAdyenPlugin: NSObject, FlutterPlugin {
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard call.method.elementsEqual("openDropIn") else { return }
 
+        
+        
+        
+        
+        
+        
+        
+//        print("\nHello world!")
+//
+//        return
+        
         let arguments = call.arguments as? [String: Any]
         let paymentMethodsResponse = arguments?["paymentMethods"] as? String
         baseURL = arguments?["baseUrl"] as? String
@@ -122,7 +133,7 @@ extension SwiftFlutterAdyenPlugin: DropInComponentDelegate {
                 reference: reference,
                 amount: amountAsInt ?? 0,
                 returnUrl: returnUrl ?? "",
-                storePayment: data.storePaymentMethod,
+                storePayment: false,
                 shopperReference: shopperReference,
                 countryCode: shopperLocale
             ),
@@ -150,12 +161,20 @@ extension SwiftFlutterAdyenPlugin: DropInComponentDelegate {
     func finish(data: Data, component: DropInComponent) {
         DispatchQueue.main.async {
             guard let response = try? JSONDecoder().decode(PaymentsResponse.self, from: data) else {
+                print("Cant parse some data!!!!!")
                 self.didFail(with: PaymentError(), from: component)
                 return
             }
+            
+            print("Parsed successfully")
+            
             if let action = response.action {
                 component.stopLoadingIfNeeded()
-                component.handle(action)
+                print("Test 1")
+                DispatchQueue.main.async {
+                    component.handle(action)
+                }
+                print("Test 2")
             } else {
                 component.stopLoadingIfNeeded()
                 if response.resultCode == .authorised || response.resultCode == .received || response.resultCode == .pending, let result = self.mResult {
@@ -188,6 +207,7 @@ extension SwiftFlutterAdyenPlugin: DropInComponentDelegate {
                     }
                 }
                 if let data = data {
+                    print("We are here 111111")
                     self.finish(data: data, component: component)
                 }
 

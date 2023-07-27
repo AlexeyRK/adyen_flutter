@@ -32,7 +32,7 @@ class _MyAppState extends State<MyApp> {
             try {
               dropInResponse = await FlutterAdyen.openDropIn(
                   paymentMethods: paymentMethods,
-                  baseUrl: 'https://dev.futoncompany.co.uk',
+                  baseUrl: 'https://dev.futoncompany.co.uk/',
                   clientKey: clientKey,
                   publicKey: publicKey,
                   locale: 'de_DE',
