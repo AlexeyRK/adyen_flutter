@@ -40,17 +40,7 @@ public class SwiftFlutterAdyenPlugin: NSObject, FlutterPlugin {
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard call.method.elementsEqual("openDropIn") else { return }
 
-        
-        
-        
-        
-        
-        
-        
-//        print("\nHello world!")
-//
-//        return
-        
+
         let arguments = call.arguments as? [String: Any]
         let paymentMethodsResponse = arguments?["paymentMethods"] as? String
         baseURL = arguments?["baseUrl"] as? String
@@ -207,7 +197,6 @@ extension SwiftFlutterAdyenPlugin: DropInComponentDelegate {
                     }
                 }
                 if let data = data {
-                    print("We are here 111111")
                     self.finish(data: data, component: component)
                 }
 
