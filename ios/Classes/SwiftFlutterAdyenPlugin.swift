@@ -75,7 +75,9 @@ public class SwiftFlutterAdyenPlugin: NSObject, FlutterPlugin {
 
         let apiContext = APIContext(environment: ctx, clientKey: clientKey!)
         let configuration = DropInComponent.Configuration(apiContext: apiContext);
-        configuration.card.showsHolderNameField = true
+        configuration.card.showsHolderNameField = false
+        configuration.card.showsStorePaymentMethodField = false
+        
         dropInComponent = DropInComponent(paymentMethods: paymentMethods, configuration: configuration, style: dropInComponentStyle)
         dropInComponent?.delegate = self
 
