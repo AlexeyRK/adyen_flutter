@@ -1,4 +1,5 @@
 import Flutter
+import SwiftUI
 import UIKit
 import Adyen
 import Adyen3DS2
@@ -71,21 +72,41 @@ public class SwiftFlutterAdyenPlugin: NSObject, FlutterPlugin {
             ctx = Environment.liveEurope
         }
 
-        let dropInComponentStyle = DropInComponent.Style()
+        var dropInComponentStyle = DropInComponent.Style()
+        
+        dropInComponentStyle.listComponent.sectionHeader.title.color = UIColor.black
+        dropInComponentStyle.formComponent.textField.title.color = UIColor.black
+        dropInComponentStyle.formComponent.tintColor = UIColor.black
+        dropInComponentStyle.formComponent.mainButtonItem.button.backgroundColor = UIColor.black
+        dropInComponentStyle.formComponent.mainButtonItem.button.title.color = UIColor.white
+        dropInComponentStyle.formComponent.mainButtonItem.button.cornerRounding = CornerRounding.fixed(5)
+        
+        
+        
 
         let apiContext = APIContext(environment: ctx, clientKey: clientKey!)
         let configuration = DropInComponent.Configuration(apiContext: apiContext);
         configuration.card.showsHolderNameField = false
         configuration.card.showsStorePaymentMethodField = false
         
+        
+        let amountAsInt = Int(amount ?? "0")
+        configuration.payment = Adyen.Payment(amount: Adyen.Amount(value: amountAsInt ?? 0, currencyCode: "GBP"), countryCode: "GB")
+        
+        // TODO: Change pay button text
+        
         dropInComponent = DropInComponent(paymentMethods: paymentMethods, configuration: configuration, style: dropInComponentStyle)
         dropInComponent?.delegate = self
 
+    
+        
         if var topController = UIApplication.shared.keyWindow?.rootViewController, let dropIn = dropInComponent {
             self.topController = topController
             while let presentedViewController = topController.presentedViewController{
                 topController = presentedViewController
             }
+            
+            
             topController.present(dropIn.viewController, animated: true)
         }
     }
