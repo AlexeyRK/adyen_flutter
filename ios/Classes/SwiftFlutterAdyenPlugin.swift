@@ -93,6 +93,7 @@ public class SwiftFlutterAdyenPlugin: NSObject, FlutterPlugin {
         let amountAsInt = Int(amount ?? "0")
         configuration.payment = Adyen.Payment(amount: Adyen.Amount(value: amountAsInt ?? 0, currencyCode: "GBP"), countryCode: "GB")
         
+        
         // TODO: Change pay button text
         
         dropInComponent = DropInComponent(paymentMethods: paymentMethods, configuration: configuration, style: dropInComponentStyle)
