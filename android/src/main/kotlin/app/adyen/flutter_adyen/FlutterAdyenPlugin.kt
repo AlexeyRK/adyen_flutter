@@ -82,7 +82,7 @@ class FlutterAdyenPlugin :
                 val paymentMethods = call.argument<String>("paymentMethods")
                 val baseUrl = call.argument<String>("baseUrl")
                 val clientKey = call.argument<String>("clientKey")
-                val amount = call.argument<String>("amount")
+                val amount: String? = call.argument<String>("amount")
                 val currency = call.argument<String>("currency")
                 val env = call.argument<String>("environment")
                 val lineItem = call.argument<Map<String, String>>("lineItem")
@@ -118,14 +118,18 @@ class FlutterAdyenPlugin :
                 try {
                     val jsonObject = JSONObject(paymentMethods ?: "")
                     val paymentMethodsApiResponse = PaymentMethodsApiResponse.SERIALIZER.deserialize(jsonObject)
-                    val shopperLocale = Locale.GERMANY
+                    val shopperLocale = Locale.UK
                     // val shopperLocale = if (LocaleUtil.isValidLocale(locale)) locale else LocaleUtil.getLocale(nonNullActivity)
                     // Log.e("[Flutter Adyen] SHOPPER LOCALE", "Shopper Locale from localeString $localeString: $shopperLocale")
                     val cardConfiguration = CardConfiguration.Builder(nonNullActivity, clientKey!!)
-                            .setHolderNameRequired(true)
+                            .setHolderNameRequired(false)
                             .setShopperLocale(shopperLocale)
                             .setEnvironment(environment)
-                            .build()
+                        .setShowStorePaymentField(false)
+                        .build()
+                            
+
+
 
                     val sharedPref = nonNullActivity.getSharedPreferences("ADYEN", Context.MODE_PRIVATE)
                     with(sharedPref.edit()) {
@@ -141,9 +145,17 @@ class FlutterAdyenPlugin :
                         commit()
                     }
 
+
+                    val amountSettings = Amount()
+                    amountSettings.currency = "GBP"
+                    amountSettings.value = amount!!.toInt()
+
                     val dropInConfiguration = DropInConfiguration.Builder(nonNullActivity, AdyenDropinService::class.java, clientKey)
                             .addCardConfiguration(cardConfiguration)
                             .setEnvironment(environment)
+                            .setAmount(amountSettings)
+                        
+
                             .build()
 
                     DropIn.startPayment(nonNullActivity, paymentMethodsApiResponse, dropInConfiguration)
@@ -261,7 +273,7 @@ class AdyenDropinService : DropInService() {
                 currency = currency ?: "",
                 reference = reference ?: "",
                 shopperReference = shopperReference,
-                countryCode = countryCode ?: "DE",
+                countryCode = countryCode ?: "GB",
                 additionalData = additionalData)
         val paymentsRequestJson = serializePaymentsRequest(paymentsRequest)
 

@@ -35,7 +35,7 @@ class _MyAppState extends State<MyApp> {
                   baseUrl: 'https://dev.futoncompany.co.uk/',
                   clientKey: clientKey,
                   publicKey: publicKey,
-                  locale: 'de_DE',
+                  locale: 'GB',
                   shopperReference: 'edasdasdeqweqwdasdasdsaeqeqw',
                   reference: 'T-SO-321630',
                   returnUrl: 'coukfutoncompany://payment',
