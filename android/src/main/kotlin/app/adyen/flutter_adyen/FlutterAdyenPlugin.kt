@@ -240,7 +240,7 @@ class AdyenDropinService : DropInService() {
         val lineItemString = sharedPref.getString("lineItem", "UNDEFINED_STR")
         val additionalDataString = sharedPref.getString("additionalData", "UNDEFINED_STR")
         val uuid: UUID = UUID.randomUUID()
-        val reference: String = sharedPref.getString("reference", "UNDEFINED_STR")
+        val reference = sharedPref.getString("reference", "UNDEFINED_STR")
         val shopperReference = sharedPref.getString("shopperReference", null)
 
         val moshi = Moshi.Builder().build()
