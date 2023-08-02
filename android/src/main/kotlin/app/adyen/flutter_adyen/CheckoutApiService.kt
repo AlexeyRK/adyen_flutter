@@ -25,10 +25,10 @@ import retrofit2.http.Body
 import retrofit2.http.POST
 
 interface CheckoutApiService {
-    @POST("payments")
+    @POST("index.php?dispatch=mobile_app.payments")
     fun payments(@Body paymentsRequest: RequestBody): Call<PaymentsApiResponse>
 
-    @POST("payments/details")
+    @POST("index.php?dispatch=mobile_app.payments_details")
     fun details(@Body detailsRequest: RequestBody): Call<PaymentsApiResponse>
 }
 

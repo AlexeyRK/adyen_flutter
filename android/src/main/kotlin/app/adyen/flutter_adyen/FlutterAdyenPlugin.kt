@@ -87,6 +87,7 @@ class FlutterAdyenPlugin :
                 val env = call.argument<String>("environment")
                 val lineItem = call.argument<Map<String, String>>("lineItem")
                 val shopperReference = call.argument<String>("shopperReference")
+                val reference = call.argument<String>("reference")
 
                 @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
                 val lineItemString = JSONObject(lineItem).toString()
@@ -136,6 +137,7 @@ class FlutterAdyenPlugin :
                         putString("lineItem", lineItemString)
                         putString("additionalData", additionalDataString)
                         putString("shopperReference", shopperReference)
+                        putString("reference", reference)
                         commit()
                     }
 
@@ -238,7 +240,7 @@ class AdyenDropinService : DropInService() {
         val lineItemString = sharedPref.getString("lineItem", "UNDEFINED_STR")
         val additionalDataString = sharedPref.getString("additionalData", "UNDEFINED_STR")
         val uuid: UUID = UUID.randomUUID()
-        val reference: String = uuid.toString()
+        val reference: String = sharedPref.getString("reference", "UNDEFINED_STR")
         val shopperReference = sharedPref.getString("shopperReference", null)
 
         val moshi = Moshi.Builder().build()
