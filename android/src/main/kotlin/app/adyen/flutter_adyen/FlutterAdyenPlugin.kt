@@ -3,6 +3,7 @@ package app.adyen.flutter_adyen
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.adyen.checkout.card.CardConfiguration
 import com.adyen.checkout.components.model.PaymentMethodsApiResponse
 import com.adyen.checkout.components.model.payments.Amount
@@ -182,6 +183,8 @@ class FlutterAdyenPlugin :
         return true
     }
 
+
+
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         onAttachedToEngine(binding.binaryMessenger)
     }
@@ -292,7 +295,14 @@ class AdyenDropinService : DropInService() {
                         putString("AdyenResultCode", paymentsResponse.action.toString())
                         commit()
                     }
-                    DropInServiceResult.Action(paymentsResponse.action)
+
+                    Log.d("", "Hello world!!!!!!!")
+
+                    val resultik = DropInServiceResult.Action(paymentsResponse.action)
+
+                    Log.d("", "Hello world 222222")
+
+                    return resultik
                 } else {
                     if (paymentsResponse.resultCode != null &&
                             (paymentsResponse.resultCode == "Authorised" || paymentsResponse.resultCode == "Received" || paymentsResponse.resultCode == "Pending")) {
