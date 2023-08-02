@@ -259,7 +259,7 @@ class AdyenDropinService : DropInService() {
                 context = this@AdyenDropinService, lineItem, serializedPaymentComponentData,
                 amount = amount ?: "",
                 currency = currency ?: "",
-                reference = reference,
+                reference = reference ?: "",
                 shopperReference = shopperReference,
                 countryCode = countryCode ?: "DE",
                 additionalData = additionalData)
