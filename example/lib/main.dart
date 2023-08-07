@@ -38,7 +38,7 @@ class _MyAppState extends State<MyApp> {
                   locale: 'GB',
                   shopperReference: 'edasdasdeqweqwdasdasdsaeqeqw',
                   reference: 'T-SO-321630',
-                  returnUrl: 'coukfutoncompany://payment',
+                  returnUrl: 'coukfutoncompany1://payment',
                   amount: '1230',
                   lineItem: {'id': '1', 'description': 'adyen test'},
                   currency: 'EUR',
@@ -52,9 +52,13 @@ class _MyAppState extends State<MyApp> {
                 dropInResponse = 'Payment Error';
             }
 
+            // +4401895092301
+
             setState(() {
               _payment_result = dropInResponse;
             });
+
+            print("Result: " + dropInResponse.toString());
           },
         ),
         appBar: AppBar(

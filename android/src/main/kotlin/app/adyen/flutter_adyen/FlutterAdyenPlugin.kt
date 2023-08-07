@@ -3,18 +3,25 @@ package app.adyen.flutter_adyen
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.util.Log
+import android.net.Uri
+import androidx.preference.PreferenceManager
 import com.adyen.checkout.card.CardConfiguration
 import com.adyen.checkout.components.model.PaymentMethodsApiResponse
 import com.adyen.checkout.components.model.payments.Amount
 import com.adyen.checkout.components.model.payments.request.PaymentComponentData
 import com.adyen.checkout.components.model.payments.request.PaymentMethodDetails
+import com.adyen.checkout.components.model.payments.response.Action
+import com.adyen.checkout.components.model.payments.response.RedirectAction
 import com.adyen.checkout.core.api.Environment
 import com.adyen.checkout.dropin.DropIn
+import com.adyen.checkout.dropin.DropInCallback
 import com.adyen.checkout.dropin.DropInConfiguration
+import com.adyen.checkout.dropin.DropInResult
 import com.adyen.checkout.dropin.service.DropInService
 import com.adyen.checkout.dropin.service.DropInServiceResult
+import com.adyen.checkout.dropin.ui.DropInActivity
 import com.adyen.checkout.redirect.RedirectComponent
+import com.adyen.checkout.redirect.RedirectUtil
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.squareup.moshi.Moshi
@@ -40,7 +47,7 @@ import kotlin.collections.HashMap
 import kotlin.jvm.Throws
 
 class FlutterAdyenPlugin :
-        MethodCallHandler, PluginRegistry.ActivityResultListener, FlutterPlugin, ActivityAware {
+    MethodCallHandler, PluginRegistry.ActivityResultListener, FlutterPlugin, ActivityAware {
 
     private var methodChannel: MethodChannel? = null
 
@@ -64,18 +71,43 @@ class FlutterAdyenPlugin :
                 addActivityResultListener(registrar)
             }
         }
+
+        fun processRedirectData(intent: Intent, activity: Activity) {
+
+            val sharedPref = activity.getSharedPreferences("ADYEN", Context.MODE_PRIVATE)
+            val storedResultCode = sharedPref.getString("paymentData", "PAYMENT_CANCELLED")
+            Log.d("", "YEEESSS: " + storedResultCode)
+
+
+
+            val result = RedirectUtil.parseRedirectResult(Uri.parse(intent.dataString))
+
+            val ra = RedirectAction.SERIALIZER.deserialize(result)
+            Log.d("", "DADDDDDD: " + ra.paymentData)
+
+            Log.d("", "Result: " + result)
+
+            AdyenDropinService().makeDetailsCallForRedirect(result, activity)
+
+        }
     }
+
+
 
     override fun onMethodCall(call: MethodCall, res: Result) {
         when (call.method) {
             "openDropIn" -> {
 
                 if (activity == null) {
-                    res.error("1",
-                            "Activity is null",
-                            "The activity is probably not attached")
+                    res.error(
+                        "1",
+                        "Activity is null",
+                        "The activity is probably not attached"
+                    )
                     return
                 }
+
+
 
                 val nonNullActivity = activity!!
 
@@ -123,13 +155,11 @@ class FlutterAdyenPlugin :
                     // val shopperLocale = if (LocaleUtil.isValidLocale(locale)) locale else LocaleUtil.getLocale(nonNullActivity)
                     // Log.e("[Flutter Adyen] SHOPPER LOCALE", "Shopper Locale from localeString $localeString: $shopperLocale")
                     val cardConfiguration = CardConfiguration.Builder(nonNullActivity, clientKey!!)
-                            .setHolderNameRequired(false)
-                            .setShopperLocale(shopperLocale)
-                            .setEnvironment(environment)
+                        .setHolderNameRequired(false)
+                        .setShopperLocale(shopperLocale)
+                        .setEnvironment(environment)
                         .setShowStorePaymentField(false)
                         .build()
-                            
-
 
 
                     val sharedPref = nonNullActivity.getSharedPreferences("ADYEN", Context.MODE_PRIVATE)
@@ -152,20 +182,23 @@ class FlutterAdyenPlugin :
                     amountSettings.value = amount!!.toInt()
 
                     val dropInConfiguration = DropInConfiguration.Builder(nonNullActivity, AdyenDropinService::class.java, clientKey)
-                            .addCardConfiguration(cardConfiguration)
-                            .setEnvironment(environment)
-                            .setAmount(amountSettings)
-                        
+                        .addCardConfiguration(cardConfiguration)
+                        .setEnvironment(environment)
+                        .setAmount(amountSettings)
+                        .build()
 
-                            .build()
 
-                    DropIn.startPayment(nonNullActivity, paymentMethodsApiResponse, dropInConfiguration)
+
+                    DropIn.startPayment(nonNullActivity, paymentMethodsApiResponse, dropInConfiguration, null)
+
 
                     flutterResult = res
                 } catch (e: Throwable) {
                     res.error("PAYMENT_ERROR", "${e.printStackTrace()}", "")
                 }
             }
+
+
             else -> {
                 res.notImplemented()
             }
@@ -174,12 +207,15 @@ class FlutterAdyenPlugin :
 
     //region lifecycle
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
+
         if (activity == null) return false
 
         val sharedPref = activity!!.getSharedPreferences("ADYEN", Context.MODE_PRIVATE)
         val storedResultCode = sharedPref.getString("AdyenResultCode", "PAYMENT_CANCELLED")
+
         flutterResult?.success(storedResultCode)
         flutterResult = null
+
         return true
     }
 
@@ -242,9 +278,13 @@ class FlutterAdyenPlugin :
  * You should make the calls to your own servers and have additional data or processing if necessary.
  */
 @Throws(JsonSyntaxException::class)
-inline fun <reified T> Gson.fromJson(json: String): T? = fromJson<T>(json, object: TypeToken<T>() {}.type)
+inline fun <reified T> Gson.fromJson(json: String): T? = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
 class AdyenDropinService : DropInService() {
+
+    companion object {
+
+    }
 
     override fun makePaymentsCall(paymentComponentJson: JSONObject): DropInServiceResult {
         val sharedPref = getSharedPreferences("ADYEN", Context.MODE_PRIVATE)
@@ -271,13 +311,14 @@ class AdyenDropinService : DropInService() {
             return DropInServiceResult.Error(errorMessage = "Empty payment data")
 
         val paymentsRequest = createPaymentsRequest(
-                context = this@AdyenDropinService, lineItem, serializedPaymentComponentData,
-                amount = amount ?: "",
-                currency = currency ?: "",
-                reference = reference ?: "",
-                shopperReference = shopperReference,
-                countryCode = countryCode ?: "GB",
-                additionalData = additionalData)
+            context = this@AdyenDropinService, lineItem, serializedPaymentComponentData,
+            amount = amount ?: "",
+            currency = currency ?: "",
+            reference = reference ?: "",
+            shopperReference = shopperReference,
+            countryCode = countryCode ?: "GB",
+            additionalData = additionalData
+        )
         val paymentsRequestJson = serializePaymentsRequest(paymentsRequest)
 
         val requestBody = RequestBody.create(MediaType.parse("application/json"), paymentsRequestJson.toString())
@@ -291,32 +332,29 @@ class AdyenDropinService : DropInService() {
 
             if (response.isSuccessful && paymentsResponse != null) {
                 if (paymentsResponse.action != null) {
+
                     with(sharedPref.edit()) {
                         putString("AdyenResultCode", paymentsResponse.action.toString())
                         commit()
                     }
 
-                    Log.d("", "Hello world!!!!!!!")
+                    DropInServiceResult.Action(paymentsResponse.action)
 
-                    val resultik = DropInServiceResult.Action(paymentsResponse.action)
-
-                    Log.d("", "Hello world 222222")
-
-                    return resultik
                 } else {
                     if (paymentsResponse.resultCode != null &&
-                            (paymentsResponse.resultCode == "Authorised" || paymentsResponse.resultCode == "Received" || paymentsResponse.resultCode == "Pending")) {
+                        (paymentsResponse.resultCode == "Authorised" || paymentsResponse.resultCode == "Received" || paymentsResponse.resultCode == "Pending")
+                    ) {
                         with(sharedPref.edit()) {
                             putString("AdyenResultCode", paymentsResponse.resultCode)
                             commit()
                         }
-                       DropInServiceResult.Finished(paymentsResponse.resultCode)
+                        DropInServiceResult.Finished(paymentsResponse.resultCode)
                     } else {
                         with(sharedPref.edit()) {
                             putString("AdyenResultCode", paymentsResponse.resultCode ?: "EMPTY")
                             commit()
                         }
-                       DropInServiceResult.Finished(paymentsResponse.resultCode ?: "EMPTY")
+                        DropInServiceResult.Finished(paymentsResponse.resultCode ?: "EMPTY")
                     }
                 }
             } else {
@@ -336,6 +374,7 @@ class AdyenDropinService : DropInService() {
     }
 
     override fun makeDetailsCall(actionComponentJson: JSONObject): DropInServiceResult {
+
         val sharedPref = getSharedPreferences("ADYEN", Context.MODE_PRIVATE)
         val baseUrl = sharedPref.getString("baseUrl", "UNDEFINED_STR")
         val requestBody = RequestBody.create(MediaType.parse("application/json"), actionComponentJson.toString())
@@ -352,9 +391,9 @@ class AdyenDropinService : DropInService() {
                         commit()
                     }
                     DropInServiceResult.Action(detailsResponse.action)
-                }
-                else if (detailsResponse.resultCode != null &&
-                        (detailsResponse.resultCode == "Authorised" || detailsResponse.resultCode == "Received" || detailsResponse.resultCode == "Pending")) {
+                } else if (detailsResponse.resultCode != null &&
+                    (detailsResponse.resultCode == "Authorised" || detailsResponse.resultCode == "Received" || detailsResponse.resultCode == "Pending")
+                ) {
                     with(sharedPref.edit()) {
                         putString("AdyenResultCode", detailsResponse.resultCode)
                         commit()
@@ -379,28 +418,81 @@ class AdyenDropinService : DropInService() {
                 putString("AdyenResultCode", "ERROR")
                 commit()
             }
-            DropInServiceResult.Error(errorMessage =  "IOException")
+            DropInServiceResult.Error(errorMessage = "IOException")
+        }
+    }
+
+    fun makeDetailsCallForRedirect(actionComponentJson: JSONObject, activity: Activity) {
+
+        val sharedPref = activity.getSharedPreferences("ADYEN", Context.MODE_PRIVATE)
+        val baseUrl = sharedPref.getString("baseUrl", "UNDEFINED_STR")
+        val requestBody = RequestBody.create(MediaType.parse("application/json"), actionComponentJson.toString())
+        val headers: HashMap<String, String> = HashMap()
+
+        val call = getService(headers, baseUrl ?: "").details(requestBody)
+        try {
+            val response = call.execute()
+            val detailsResponse = response.body()
+            if (response.isSuccessful && detailsResponse != null) {
+                if (detailsResponse.action != null) {
+                    with(sharedPref.edit()) {
+                        putString("AdyenResultCode", detailsResponse.action.toString())
+                        commit()
+                    }
+                    DropInServiceResult.Action(detailsResponse.action)
+                } else if (detailsResponse.resultCode != null &&
+                    (detailsResponse.resultCode == "Authorised" || detailsResponse.resultCode == "Received" || detailsResponse.resultCode == "Pending")
+                ) {
+                    with(sharedPref.edit()) {
+                        putString("AdyenResultCode", detailsResponse.resultCode)
+                        commit()
+                    }
+                    DropInServiceResult.Finished(detailsResponse.resultCode)
+                } else {
+                    with(sharedPref.edit()) {
+                        putString("AdyenResultCode", detailsResponse.resultCode ?: "EMPTY")
+                        commit()
+                    }
+                    DropInServiceResult.Finished(detailsResponse.resultCode ?: "EMPTY")
+                }
+            } else {
+                with(sharedPref.edit()) {
+                    putString("AdyenResultCode", "ERROR")
+                    commit()
+                }
+                DropInServiceResult.Error(errorMessage = "IOException")
+            }
+        } catch (e: IOException) {
+            with(sharedPref.edit()) {
+                putString("AdyenResultCode", "ERROR")
+                commit()
+            }
+            DropInServiceResult.Error(errorMessage = "IOException")
         }
     }
 }
 
-fun createPaymentsRequest(context: Context, lineItem: LineItem?,
-                          paymentComponentData: PaymentComponentData<out PaymentMethodDetails>,
-                          amount: String, currency: String,
-                          reference: String, shopperReference: String?,
-                          countryCode: String,
-                          additionalData: Map<String, String>): PaymentsRequest {
+fun createPaymentsRequest(
+    context: Context, lineItem: LineItem?,
+    paymentComponentData: PaymentComponentData<out PaymentMethodDetails>,
+    amount: String, currency: String,
+    reference: String, shopperReference: String?,
+    countryCode: String,
+    additionalData: Map<String, String>
+): PaymentsRequest {
     @Suppress("UsePropertyAccessSyntax")
     return PaymentsRequest(
-            payment = Payment(paymentComponentData.getPaymentMethod() as PaymentMethodDetails,
-                    countryCode,
-                    paymentComponentData.isStorePaymentMethodEnable,
-                    getAmount(amount, currency),
-                    reference,
-                    RedirectComponent.getReturnUrl(context),
-                    lineItems = listOf(lineItem),
-                    shopperReference = shopperReference),
-            additionalData = additionalData
+        payment = Payment(
+            paymentComponentData.getPaymentMethod() as PaymentMethodDetails,
+            countryCode,
+            paymentComponentData.isStorePaymentMethodEnable,
+            getAmount(amount, currency),
+            reference,
+            RedirectComponent.getReturnUrl(context),
+            lineItems = listOf(lineItem),
+            shopperReference = shopperReference
+        ),
+        additionalData = additionalData
     )
 }
 
@@ -415,27 +507,27 @@ fun createAmount(value: Int, currency: String): Amount {
 
 //region data classes
 data class Payment(
-        val paymentMethod: PaymentMethodDetails,
-        val countryCode: String = "DE",
-        val storePaymentMethod: Boolean,
-        val amount: Amount,
-        val reference: String,
-        val returnUrl: String,
-        val channel: String = "Android",
-        val lineItems: List<LineItem?>,
-        val additionalData: AdditionalData = AdditionalData(allow3DS2 = "true"),
-        val shopperReference: String?
-): Serializable
+    val paymentMethod: PaymentMethodDetails,
+    val countryCode: String = "DE",
+    val storePaymentMethod: Boolean,
+    val amount: Amount,
+    val reference: String,
+    val returnUrl: String,
+    val channel: String = "Android",
+    val lineItems: List<LineItem?>,
+    val additionalData: AdditionalData = AdditionalData(allow3DS2 = "true"),
+    val shopperReference: String?
+) : Serializable
 
 data class PaymentsRequest(
-        val payment: Payment,
-        val additionalData: Map<String, String>
-): Serializable
+    val payment: Payment,
+    val additionalData: Map<String, String>
+) : Serializable
 
 data class LineItem(
-        val id: String,
-        val description: String
-): Serializable
+    val id: String,
+    val description: String
+) : Serializable
 
 data class AdditionalData(val allow3DS2: String = "true")
 //endregion
